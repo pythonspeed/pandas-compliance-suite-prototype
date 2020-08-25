@@ -62,3 +62,99 @@ Therefore, good next steps would be:
 2. Then, prototype using that information for static analysis, or perhaps runtime errors.
 
 
+## Gathering compatibility information
+
+### What information do we need?
+
+The fundamental API atoms, the thing that can be supported or not supported, are specific a function/method being called with _specific types_.
+Or rather:
+
+1. For some method arguments, the type isn't meaningful: any type will do.
+   For example, `Series.add` will take anything that can be added, and one expects the underyling implementation to devolve to a plain `+`. Put another way, the same logic handles all types.
+2. For other arguments, the behavior is different based on the type.
+   For example, `df[x] = 1` has different behavior depending on whether `x` is a string, a `DataFrame`, a list, a boolean `Index`, etc..
+   In typing terms, this would be `Union[str, DataFrame, Index, list]`, although at the moment I'm  not sure one can express a boolean Index...
+
+The information we need is then:
+
+1. Supported Method/function argument variations for the Pandas API.
+2. Supported method/function argument variations for the other library's API.
+
+Combined, one can determine compatibility.
+
+There is also, of course, the semantics: even if the same signatures are supported, the results might be different.
+
+### Sources of information
+
+Information about compatibility can come from multiple sources:
+
+* Type annotations of the Pandas API.
+  Insofar as they're missing, they could be expanded to be more complete.
+* Type annotations of the emulating API, e.g. Modin.
+* Pandas test suite, which to some extent is generic test of the API.
+* The emulating library's test suite.
+
+### Some potential approaches
+
+#### COMPARE-TYPE-ANNOTATION
+
+Let's assume complete and _thorough_ type annotation for Pandas is available.
+For example:
+
+```python
+class DataFrame:
+    # ...
+    def __setitem__(self, key: Union[DataFrame, Index, ndarray, List[str], str, slice, callable], value: Any):
+       # ...
+```
+
+That's not actually complete; the callable needs to only return the other items in the Union, and there are more variants.
+What's more this _needs_ to be complete: if one just said `Iterable` or something that wouldn't allow good checking.
+
+We can then look at type annotations for e.g. Modin:
+
+```python
+class DataFrame:
+    # ...
+    def __setitem__(self, key: Union[str, List[str]], value: Any):
+        # ....
+```
+
+Obviously there are inputs that aren't supported, and an automated tool could extract those.
+
+Now, Modin could lie about what supports, of course, either on purpose (unlikely) or more likely by accident.
+Some ways of dealing this:
+
+1. Manual self-discipline, adding type annotations if and only if they have a corresponding test.
+2. In addition, or as alternative, some validation of the supported types must be done based on the Modin test suite.
+   There are tools that generate type annotations from running code, whereas this is... the opposite, but probably some of that could be reused.
+
+The benefits of this approach are that each project can work in isolation, in parallel.
+It also should work with less-exact emulations like Dask's lazy approach.
+
+The downsides is that it only validates _signatures_, not semantics.
+However, if coupled with good testing discipline on the part of the reimplementation libraries, that's OK (albeit duplication of work).
+
+#### REUSE-PANDAS-TEST-SUITE
+
+Pandas has a test suite.
+Some of that test suite is testing the public API.
+
+This test suite could be modified to allow running against multiple libraries, so one could see which tests Modin fails.
+
+Benefits are that you get to see that semantics are identical across libraries.
+
+Some problems:
+
+1. Test failures don't necessarily easily match one-to-one to API calls.
+   This would need to be annotated.
+2. Easier to solve, but annotations of "expected to fail" would need to be maintained outside the tests by the reimplementing libraries.
+3. Would have to figure out how to sync up generic test repo with Pandas repo, unless somehow Pandas tests are made generic.
+
+#### NEW-COMPLIANCE-TEST-SUITE
+
+Instead of reusing Pandas' test suite, one could create a completely new one.
+
+This sounds like a lot of work.
+
+#### What else? There are probably more
