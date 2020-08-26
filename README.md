@@ -158,3 +158,37 @@ Instead of reusing Pandas' test suite, one could create a completely new one.
 This sounds like a lot of work.
 
 #### What else? There are probably more
+
+## Proposal
+
+### 1. Pandas adds highly-specific full-coverage type annotations
+
+By highly-specific, I mean e.g. using `@override` to specify multiple different input/output pairs, using types like `Index[bool]` if a boolean Index is special, etc..
+
+This is a bunch of work, but it's a good documentation practice and will also benefit people who are just using Pandas.
+So seems like an easy sell.
+
+### 2. Modin etc. add highly-specific full-coverage type annotations
+
+1. Modeled on Pandas.
+2. Careful to only add type annotations for things that are actually tested.
+
+This is a bunch of work, but it's a good documentation practice and will also benefit people who are just using Modin.
+
+### 3. Users of Pandas can use static analysis (mypy etc.) to validate that switching to Modin will work
+
+Simply by having items 1 and 2, switching import from Pandas to Modin will allow type checking if APIs are compatible.
+
+No additional work needed by maintainers.
+
+### 4. Modin etc. can optionally have a runtime checking mode for users attempting to switch from Pandas to Modin.
+
+Static analysis may be difficult for some users.
+
+So using e.g. [typeguard](https://pypi.org/project/typeguard/), maintainers of Modin etc. can enable runtime checking with some sort of API flag or environment variable, so there's no cost by default.
+
+This is a small amount of work, probably.
+
+### 5. A new tool can generate diffs between type annotations for Pandas and type annotations for Modin etc., for documentation purposes and for `MAINTAINER-GOAL-ADDRESS-INCOMPAT`.
+
+This will require some software development, but seems like a nicely scoped project.
