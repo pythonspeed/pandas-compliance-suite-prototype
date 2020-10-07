@@ -1,7 +1,7 @@
 # Pandas API Compliance: Prototyping and Design
 
-1. There are now five different projects with Pandas-like APIs (maybe more?): Pandas, Modin, Dask, cuDF, Koalas.
-2. The Pandas API is huge.
+1. There are now five different projects with Pandas-like APIs (maybe more?): [Pandas](https://github.com/pandas-dev/pandas), [Modin](https://github.com/modin-project/modin), [Dask](https://github.com/dask/dask), [cuDF](https://github.com/rapidsai/cudf), [Koalas](https://github.com/databricks/koalas).
+2. The [Pandas API](https://pandas.pydata.org/docs/reference/index.html) is huge.
 3. It would therefore be great to have some way of saying "you can switch to Modin/Dask/etc. with no trouble".
 
 The goal of this repository is to think through how to do this, and prototype an implementation or implementations.
@@ -17,14 +17,14 @@ There are multiple goals, for different audiences:
 
 ## Non-goals
 
-The Data APIs consortium has a similar but somewhat different project, to figure out the _intersection_ of APIs across multiple libraries.
+The [Data APIs Consortium](https://data-apis.org/) has a similar but somewhat different project to figure out the _intersection_ of APIs across multiple libraries.
 However:
 
-1. It also includes non-Pandas-compatible dataframes like Vaex.
+1. It also includes non-Pandas-compatible dataframes like [Vaex](https://github.com/vaexio/vaex).
 2. It's about the minimal compatible subset.
 3. It's aimed at library users.
 
-The goal here is not "what is intersection of all dataframe APIs", but rather "does Dask/Koalas/Modin/cuDF actually support same API as Pandas", perhaps globally, perhaps on a per-application basis.
+The goal here is not "what is intersection of all dataframe APIs", but rather "does Dask/Koalas/Modin/cuDF actually support the same API as Pandas", perhaps globally, perhaps on a per-application basis.
 
 ## Potential UX
 
@@ -72,12 +72,12 @@ Or rather:
 1. For some method arguments, the type isn't meaningful: any type will do.
    For example, `Series.add` will take anything that can be added, and one expects the underyling implementation to devolve to a plain `+`. Put another way, the same logic handles all types.
 2. For other arguments, the behavior is different based on the type.
-   For example, `df[x] = 1` has different behavior depending on whether `x` is a string, a `DataFrame`, a list, a boolean `Index`, etc..
-   In typing terms, this would be `Union[str, DataFrame, Index, list]`, although at the moment I'm  not sure one can express a boolean Index...
+   For example, `df[x] = 1` has different behavior depending on whether `x` is a string, a `DataFrame`, a list, a boolean `Index`, etc....
+   In typing terms, this would be `Union[str, DataFrame, Index, list]`, although at the moment I'm  not sure one can express a boolean Index....
 
 The information we need is then:
 
-1. Supported Method/function argument variations for the Pandas API.
+1. Supported method/function argument variations for the Pandas API.
 2. Supported method/function argument variations for the other library's API.
 
 Combined, one can determine compatibility.
@@ -91,14 +91,14 @@ Information about compatibility can come from multiple sources:
 * Type annotations of the Pandas API.
   Insofar as they're missing, they could be expanded to be more complete.
 * Type annotations of the emulating API, e.g. Modin.
-* Pandas test suite, which to some extent is generic test of the API.
+* Pandas test suite, which to some extent is a generic test of the API.
 * The emulating library's test suite.
 
 ### Some potential approaches
 
 #### COMPARE-TYPE-ANNOTATION
 
-Let's assume complete and _thorough_ type annotation for Pandas is available.
+Let's assume a complete and _thorough_ type annotation for Pandas is available.
 For example:
 
 ```python
@@ -109,7 +109,7 @@ class DataFrame:
 ```
 
 That's not actually complete; the callable needs to only return the other items in the Union, and there are more variants.
-What's more this _needs_ to be complete: if one just said `Iterable` or something that wouldn't allow good checking.
+What's more this _needs_ to be complete: if one just said `Iterable` or something that wouldn't allow for good checking.
 
 We can then look at type annotations for e.g. Modin:
 
@@ -120,20 +120,20 @@ class DataFrame:
         # ....
 ```
 
-Obviously there are inputs that aren't supported, and an automated tool could extract those.
+Obviously, there are inputs that aren't supported and an automated tool could extract those.
 
 Now, Modin could lie about what supports, of course, either on purpose (unlikely) or more likely by accident.
 Some ways of dealing this:
 
 1. Manual self-discipline, adding type annotations if and only if they have a corresponding test.
-2. In addition, or as alternative, some validation of the supported types must be done based on the Modin test suite.
+2. In addition, or as an alternative, some validation of the supported types must be done based on the Modin test suite.
    There are tools that generate type annotations from running code, whereas this is... the opposite, but probably some of that could be reused.
 
-The benefits of this approach are that each project can work in isolation, in parallel.
+The benefits of this approach are that each project can work in isolation and in parallel.
 It also should work with less-exact emulations like Dask's lazy approach.
 
-The downsides is that it only validates _signatures_, not semantics.
-However, if coupled with good testing discipline on the part of the reimplementation libraries, that's OK (albeit duplication of work).
+The downside is that it only validates _signatures_, not semantics.
+However, if coupled with good testing discipline on the part of the reimplementation libraries, that's OK (albeit a duplication of work).
 
 #### REUSE-PANDAS-TEST-SUITE
 
@@ -175,7 +175,7 @@ So seems like an easy sell.
 
 This is a bunch of work, but it's a good documentation practice and will also benefit people who are just using Modin.
 
-### 3. Users of Pandas can use static analysis (mypy etc.) to validate that switching to Modin will work
+### 3. Users of Pandas can use static analysis ([mypy](https://github.com/python/mypy) etc.) to validate that switching to Modin will work
 
 Simply by having items 1 and 2, switching import from Pandas to Modin will allow type checking if APIs are compatible.
 
