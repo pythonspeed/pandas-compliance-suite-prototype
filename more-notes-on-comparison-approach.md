@@ -1,3 +1,7 @@
+# More notes on comparison approach
+
+Some of this has been moved into the README, but not all since some of it is about future ideas.
+
 ```python
 import generic_pandas.pandas as pandas
 from generic_pandas import record

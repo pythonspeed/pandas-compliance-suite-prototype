@@ -157,9 +157,38 @@ Instead of reusing Pandas' test suite, one could create a completely new one.
 
 This sounds like a lot of work.
 
+#### RUNTIME-COMPARISON
+
+It's possible to run the same code twice, e.g. on Modin and Pandas, record intermediate and final values, and then compare them.
+This would allow checking whether it's possible to switch semantically.
+
+For example:
+
+```python
+from pandas_comparator import pandas as pandas, record_value
+
+def f():
+   x = pandas.DataFrame(...)
+   record_value("x", x)
+   y = lalalala(x)
+   record_value("y", y)
+
+f()
+```
+
+And then:
+
+```shell-session
+$ PANDAS=pandas python mycode.py
+$ PANDAS=modin python mycode.py
+$ pandas-comparator-diff
+```
+
+In practice this will be more complex, e.g. probably want different virtualenvs for different runs.
+
 #### What else? There are probably more
 
-## Proposal
+## Proposal #1: Use COMPARE-TYPE-ANNOTATION
 
 ### 1. Pandas adds highly-specific full-coverage type annotations
 
@@ -192,3 +221,31 @@ This is a small amount of work, probably.
 ### 5. A new tool can generate diffs between type annotations for Pandas and type annotations for Modin etc., for documentation purposes and for `MAINTAINER-GOAL-ADDRESS-INCOMPAT`.
 
 This will require some software development, but seems like a nicely scoped project.
+
+### Outcome of this proposal
+
+While it's a good idea, in the short term this isn't going to help, because adding type annotations is going to be a long process.
+
+For example:
+
+1. Pandas depends on NumPy types. There is no released version of NumPy with type annotations--next release might (as of Oct 2020), but Pandas might not want to rely on latest absolute version.
+2. Pandas still hasn't figured out how to make its own annotations public.
+3. Pandas is missing testing infrastructure.
+4. Partial type annotations are less useful.
+
+Now, Modin etc. could start their own annotations in parallel, but they might diverge semantically making it less useful.
+
+So worth pursuing, but it's not an immediate solution.
+
+## Proposal #2: RUNTIME-COMPARISON
+
+Running the same code and (limited) data on two or more variants of Pandas/Pandas-alike has some nice properties:
+
+1. It's also useful for testing if you can upgrade to latest version of Pandas: you can compare old Pandas to new Pandas.
+2. It can be run as an independent project, iterating quickly.
+
+A minimal version would allow running same code on two versions of Pandas/Pandas-alike, recording values.
+The user could then look at differences.
+
+What counts as a semantic difference is a large problem space, and likely user-specific, so once basic framework is done the likely work will be on making this more flexible and more informative.
+For example, minor floating point differences might not matter to most users, sorting may or may not matter, when things _do_ differ semantically summarizing differences will be important, etc..
